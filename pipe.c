@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 	
 	*/
 	int prev_pipe_fd = 0;
-	for(int i = 1; i<argc; i++)
+	for(int i = 1; i<argc-1; i++)
 	{
 		int pipe_fd[2];
 		pipe(pipe_fd);
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 		if(return_code==0)
 		{	
 			dup2(prev_pipe_fd,STDIN_FILENO);
-			printf("child: %d + %d\n", prev_pipe_fd,STDIN_FILENO);
+	//		printf("child: %d + %d\n", prev_pipe_fd,STDIN_FILENO);
 			dup2(pipe_fd[1],STDOUT_FILENO);
 			close(prev_pipe_fd);			
 			execlp(argv[i],argv[i],NULL);
@@ -49,10 +49,9 @@ int main(int argc, char *argv[])
 			int pid = return_code;
 			int status = 0;
 			waitpid(pid, &status, 0);
-			prev_pipe_fd = 3;
+			prev_pipe_fd = pipe_fd[0];
 			close(pipe_fd[1]);
-			printf("%d + %d", pipe_fd[0],prev_pipe_fd);
-			printf("Child process exists with code: %d\n", WEXITSTATUS(status));
+	
 		}
 		else
 		{
@@ -60,7 +59,9 @@ int main(int argc, char *argv[])
 		}
 		
 	}
-	dup2(prev_pipe_fd,STDOUT_FILENO);
+
+	dup2(prev_pipe_fd,STDIN_FILENO);
+	execlp(argv[argc-1],argv[argc-1],NULL);
 	close(prev_pipe_fd);
 /*
 	dup2(fd[0],STDIN_FILENO);
