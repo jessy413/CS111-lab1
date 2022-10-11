@@ -8,27 +8,39 @@ int main(int argc, char *argv[])
 {
 	if(argc <= 1)
 		return 0; //replace it with exit code
-	int pipefd[argc];
-	pipefd[0] = STDIN_FILENO;
-	int prev = 0;
+	/*
+	int start_return_code = fork();
+	if(start_return_code==0)
+	{
+		dup2(fd[1], STDOUT_FILENO);
+		execlp(argv[1],argv[1],NULL);
+		exit(0);
+	}
+	else if(start_return_code > 0)
+	{
+		int pid = start_return_code;
+		int status = 0;
+		waitpid(pid, &status, 0);
+
+	}
+	else
+	{
+		printf("Error creating child starting");
+	}
+	
+	*/
+	int prev_pipe_fd = 0;
 	for(int i = 1; i<argc; i++)
 	{
-	//	printf("i: %d, %d + %d", i, fd[0],fd[1]);
-		int fd[2];
-		if(pipe(fd)==-1)
-		{
-			printf("error piping");
-			return 1;
-		}
+		int pipe_fd[2];
+		pipe(pipe_fd);
 		int return_code = fork();
-		//dup2(fd[0],STDIN_FILENO);
-		//dup2(fd[1],STDOUT_FILENO);
 		if(return_code==0)
-		{
-			printf("child %d\n", i);
-			dup2(pipefd[i-1],STDIN_FILENO);
-			dup2(STDOUT_FILENO,pipefd[i]);
-			//printf("%d + %d\n",prev_fd,fd[1]);
+		{	
+			dup2(prev_pipe_fd,STDIN_FILENO);
+			printf("child: %d + %d\n", prev_pipe_fd,STDIN_FILENO);
+			dup2(pipe_fd[1],STDOUT_FILENO);
+			close(prev_pipe_fd);			
 			execlp(argv[i],argv[i],NULL);
 			exit(0);
 		}
@@ -36,9 +48,10 @@ int main(int argc, char *argv[])
 		{
 			int pid = return_code;
 			int status = 0;
-			//close(fd[0]);
-			//close(fd[1]);
 			waitpid(pid, &status, 0);
+			prev_pipe_fd = 3;
+			close(pipe_fd[1]);
+			printf("%d + %d", pipe_fd[0],prev_pipe_fd);
 			printf("Child process exists with code: %d\n", WEXITSTATUS(status));
 		}
 		else
@@ -47,7 +60,14 @@ int main(int argc, char *argv[])
 		}
 		
 	}
-	return 0;
+	dup2(prev_pipe_fd,STDOUT_FILENO);
+	close(prev_pipe_fd);
+/*
+	dup2(fd[0],STDIN_FILENO);
+	close(fd[0]);
+	close(fd[1]);
+	execlp(argv[argc-1],argv[argc-1],NULL);
+*/	return 0;
 /*
 	int return_code = fork();
 	if(return_code == 0)
@@ -76,5 +96,4 @@ int main(int argc, char *argv[])
 	}
 */
 
-	return 0;
 }
