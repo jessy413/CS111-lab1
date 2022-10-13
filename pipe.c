@@ -7,94 +7,57 @@
 int main(int argc, char *argv[])
 {
 	if(argc <= 1)
-		return 0; //replace it with exit code
-	/*
-	int start_return_code = fork();
-	if(start_return_code==0)
 	{
-		dup2(fd[1], STDOUT_FILENO);
-		execlp(argv[1],argv[1],NULL);
-		exit(0);
+		printf("too few arguments, exit with exit status %d\n", EINVAL);
+		exit(EINVAL);
 	}
-	else if(start_return_code > 0)
-	{
-		int pid = start_return_code;
-		int status = 0;
-		waitpid(pid, &status, 0);
-
-	}
-	else
-	{
-		printf("Error creating child starting");
-	}
-	
-	*/
 	int prev_pipe_fd = 0;
-	for(int i = 1; i<argc-1; i++)
+	int exit_status = 0;
+	for(int i = 1; i<argc; i++)
 	{
 		int pipe_fd[2];
-		pipe(pipe_fd);
+		if(pipe(pipe_fd)==-1)
+		{	
+			exit(ESTRPIPE);
+		}
 		int return_code = fork();
 		if(return_code==0)
 		{	
 			dup2(prev_pipe_fd,STDIN_FILENO);
-	//		printf("child: %d + %d\n", prev_pipe_fd,STDIN_FILENO);
-			dup2(pipe_fd[1],STDOUT_FILENO);
-			close(prev_pipe_fd);			
-			execlp(argv[i],argv[i],NULL);
-			exit(0);
+			if(i!=argc-1)
+				dup2(pipe_fd[1],STDOUT_FILENO);
+		//	close(prev_pipe_fd);	
+			close(pipe_fd[1]);
+			close(pipe_fd[0]);			
+			execlp(argv[i],argv[i],NULL);	
+			exit(EINVAL);
 		}
 		else if(return_code > 0)
 		{
 			int pid = return_code;
 			int status = 0;
 			waitpid(pid, &status, 0);
+			if(WIFEXITED(status))
+			{
+				exit_status = WEXITSTATUS(status);
+				if(exit_status != 0)
+					exit(exit_status);
+			}
 			prev_pipe_fd = pipe_fd[0];
 			close(pipe_fd[1]);
 	
 		}
 		else
 		{
-			printf("Child process creation error! \n");
+			exit(ECHILD);
 		}
 		
 	}
 
-	dup2(prev_pipe_fd,STDIN_FILENO);
-	execlp(argv[argc-1],argv[argc-1],NULL);
-	close(prev_pipe_fd);
-/*
-	dup2(fd[0],STDIN_FILENO);
-	close(fd[0]);
-	close(fd[1]);
-	execlp(argv[argc-1],argv[argc-1],NULL);
-*/	return 0;
-/*
-	int return_code = fork();
-	if(return_code == 0)
-	{
-		printf("child\n");
-		dup2(pipefd[0],STDIN_FILENO);
-		close(pipefd[0]);
-		dup2(pipefd[1],STDOUT_FILENO);
-		close(pipefd[1]);
-		execlp(argv[1],argv[1],NULL);
-		exit(0);
-	}
-	else if(return_code > 0)
-	{
-		int pid = return_code;
-		int status = 0;
-		waitpid(pid, &status,0);
-		close(pipefd[1]);
-		dup2(pipefd[0],STDIN_FILENO);
-		printf("parent\n");
-		execlp(argv[2],argv[2],NULL);
-	}
-	else
-	{
-		return errno;
-	}
-*/
-
+	//dup2(prev_pipe_fd,STDIN_FILENO);
+	//execlp(argv[argc-1],argv[argc-1],NULL);
+	//close(prev_pipe_fd);
+//	printf("exit status: %d\n", exit_status);
+	return 0;
+	
 }
